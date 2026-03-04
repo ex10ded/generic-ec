@@ -22,6 +22,9 @@ use zeroize::{DefaultIsZeroes, Zeroize};
 #[cfg(any(feature = "secp256k1", feature = "secp256r1", feature = "stark"))]
 use sha2::Sha256;
 
+#[cfg(feature = "secp384r1")]
+use sha2::Sha384;
+
 pub use self::{curve_name::CurveName, point::RustCryptoPoint, scalar::RustCryptoScalar};
 
 mod affine_coords;
@@ -65,6 +68,12 @@ pub type Secp256k1 = RustCryptoCurve<k256::Secp256k1, ExpandMsgXmd<Sha256>>;
 /// Based on [p256] crate
 #[cfg(feature = "secp256r1")]
 pub type Secp256r1 = RustCryptoCurve<p256::NistP256, ExpandMsgXmd<Sha256>>;
+
+/// secp384r1 curve
+///
+/// Based on [p384] crate
+#[cfg(feature = "secp384r1")]
+pub type Secp384r1 = RustCryptoCurve<p384::NistP384, ExpandMsgXmd<Sha384>>;
 
 /// Stark curve
 ///
@@ -171,6 +180,13 @@ unsafe impl NoInvalidPoints for Secp256k1 {}
 ///   implemented in code.
 #[cfg(feature = "secp256r1")]
 unsafe impl NoInvalidPoints for Secp256r1 {}
+/// Safe because:
+/// - RustCrypto curves are always on curve:
+///   generic-ec-curves/src/rust_crypto/point.rs:60
+/// - p384 is prime order and so is always torsion-free. This check isn't even
+///   implemented in code.
+#[cfg(feature = "secp384r1")]
+unsafe impl NoInvalidPoints for Secp384r1 {}
 /// Safe because:
 /// - RustCrypto curves are always on curve:
 ///   generic-ec-curves/src/rust_crypto/point.rs:60

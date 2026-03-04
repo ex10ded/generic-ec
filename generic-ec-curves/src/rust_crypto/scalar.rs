@@ -1,6 +1,6 @@
 use core::ops::Mul;
 
-use elliptic_curve::bigint::{ArrayEncoding, ByteArray, U256, U512};
+use elliptic_curve::bigint::{ArrayEncoding, ByteArray, U256, U384, U512};
 use elliptic_curve::{Curve, CurveArithmetic, Field, Group, PrimeField, ScalarPrimitive};
 use generic_ec_core::{
     Additive, CurveGenerator, IntegerEncoding, Invertible, Multiplicative, One, Reduce, Samplable,
@@ -212,6 +212,22 @@ where
     }
 }
 
+impl<E: CurveArithmetic + Curve> Reduce<48> for RustCryptoScalar<E>
+where
+    E::Scalar: elliptic_curve::ops::Reduce<U384>,
+{
+    fn from_be_array_mod_order(bytes: &[u8; 48]) -> Self {
+        Self(elliptic_curve::ops::Reduce::<U384>::reduce(
+            U384::from_be_byte_array((*bytes).into()),
+        ))
+    }
+    fn from_le_array_mod_order(bytes: &[u8; 48]) -> Self {
+        Self(elliptic_curve::ops::Reduce::<U384>::reduce(
+            U384::from_le_byte_array((*bytes).into()),
+        ))
+    }
+}
+
 impl<E: CurveArithmetic + Curve> Reduce<64> for RustCryptoScalar<E>
 where
     E::Scalar: elliptic_curve::ops::Reduce<U512>,
@@ -251,6 +267,15 @@ impl BytesModOrder for RustCryptoScalar<p256::NistP256> {
     }
     fn from_le_bytes_mod_order(bytes: &[u8]) -> Self {
         crate::utils::scalar_from_le_bytes_mod_order_reducing_32(bytes, &Self(p256::Scalar::ONE))
+    }
+}
+#[cfg(feature = "secp384r1")]
+impl BytesModOrder for RustCryptoScalar<p384::NistP384> {
+    fn from_be_bytes_mod_order(bytes: &[u8]) -> Self {
+        crate::utils::scalar_from_be_bytes_mod_order_reducing_48(bytes, &Self(p384::Scalar::ONE))
+    }
+    fn from_le_bytes_mod_order(bytes: &[u8]) -> Self {
+        crate::utils::scalar_from_le_bytes_mod_order_reducing_48(bytes, &Self(p384::Scalar::ONE))
     }
 }
 #[cfg(feature = "stark")]
