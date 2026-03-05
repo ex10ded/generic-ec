@@ -418,6 +418,12 @@ mod tests {
     #[instantiate_tests(<generic_ec::curves::Secp256r1>)]
     mod secp256r1 {}
 
+    #[instantiate_tests(<generic_ec::curves::Secp384r1>)]
+    mod secp384r1 {}
+
     #[instantiate_tests(<generic_ec::curves::Stark>)]
     mod stark {}
+
+    #[instantiate_tests(<generic_ec::curves::Ed25519>)]
+    mod ed25519 {}
 }

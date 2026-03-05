@@ -202,7 +202,7 @@ mod tests {
         Curve,
     };
 
-    use super::{Secp256k1, Secp256r1, Stark};
+    use super::{Secp256k1, Secp256r1, Secp384r1, Stark};
 
     /// Asserts that `E` implements `Curve`
     fn _impls_curve<E: Curve>() {}
@@ -211,10 +211,12 @@ mod tests {
     fn _curves_impl_trait() {
         _impls_curve::<Secp256k1>();
         _impls_curve::<Secp256r1>();
+        _impls_curve::<Secp384r1>();
         _impls_curve::<Stark>();
 
         _exposes_affine_coords::<Secp256k1>();
         _exposes_affine_coords::<Secp256r1>();
+        _exposes_affine_coords::<Secp384r1>();
         _exposes_affine_coords::<Stark>();
     }
 }
