@@ -352,6 +352,7 @@ mod tests {
     // Note, that `generic-ec-tests` has more extensive tests. A smaller test here
     // is supposed to detect an issue earlier and more precisely if it ever arises.
     #[test]
+    #[cfg(feature = "ed25519")]
     fn works_on_ed25519() {
         let x = 0x11223344_u32;
         let expected = curve25519::Scalar::from(x);
@@ -373,6 +374,32 @@ mod tests {
         assert_eq!(
             expected,
             super::scalar_from_le_bytes_mod_order_reducing_32(&x.to_le_bytes(), one).0
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "secp384r1")]
+    fn works_on_p384() {
+        let x = 0x1122334455667788_u64;
+        let expected = p384::Scalar::from(x);
+
+        let mut bytes_48 = [0u8; 48];
+
+        let one = &crate::rust_crypto::RustCryptoScalar::<p384::NistP384>(p384::Scalar::ONE);
+
+        // BE
+        bytes_48[48 - 8..].copy_from_slice(&x.to_be_bytes());
+        assert_eq!(
+            expected,
+            super::scalar_from_be_bytes_mod_order_reducing_48(&bytes_48, one).0
+        );
+
+        // LE
+        bytes_48.fill(0);
+        bytes_48[..8].copy_from_slice(&x.to_le_bytes());
+        assert_eq!(
+            expected,
+            super::scalar_from_le_bytes_mod_order_reducing_48(&bytes_48, one).0
         );
     }
 }
