@@ -250,6 +250,9 @@ pub mod curves {
     #[cfg(feature = "curve-secp256r1")]
     #[cfg_attr(docsrs, doc(cfg(feature = "curve-secp256r1")))]
     pub use generic_ec_curves::Secp256r1;
+    #[cfg(feature = "curve-secp384r1")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "curve-secp384r1")))]
+    pub use generic_ec_curves::Secp384r1;
     #[cfg(feature = "curve-stark")]
     #[cfg_attr(docsrs, doc(cfg(feature = "curve-stark")))]
     pub use generic_ec_curves::Stark;
@@ -324,6 +327,8 @@ pub mod curves {
         secp256k1: Secp256k1,
         #[cfg(feature = "curve-secp256r1")]
         secp256r1: Secp256r1,
+        #[cfg(feature = "curve-secp384r1")]
+        secp384r1: Secp384r1,
         #[cfg(feature = "curve-stark")]
         stark: Stark,
         #[cfg(feature = "curve-ed25519")]

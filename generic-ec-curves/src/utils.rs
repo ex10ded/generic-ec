@@ -238,12 +238,121 @@ where
     }
 }
 
+/// Interprets `bytes` as little-endian encoding of an integer, takes it modulo curve (prime)
+/// order and returns scalar `S`
+///
+/// Works with scalars for which [`Reduce<48>`][Reduce] is defined.
+///
+/// Takes:
+/// * Little-endian `bytes` representation of the integer
+/// * Scalar `one = 1`
+pub fn scalar_from_le_bytes_mod_order_reducing_48<S>(bytes: &[u8], one: &S) -> S
+where
+    S: Default + Copy,
+    S: Reduce<48>,
+    S: generic_ec_core::Additive + generic_ec_core::Multiplicative<S, Output = S>,
+{
+    let len = bytes.len();
+    match len {
+        ..=47 => {
+            let mut padded = [0u8; 48];
+            padded[..len].copy_from_slice(bytes);
+            S::from_le_array_mod_order(&padded)
+        }
+        48 => {
+            #[allow(clippy::expect_used)]
+            let bytes: &[u8; 48] = bytes.try_into().expect("we checked that bytes len == 48");
+            S::from_le_array_mod_order(bytes)
+        }
+        49.. => {
+            let two_to_384 = S::add(&S::from_le_array_mod_order(&[0xff; 48]), one);
+
+            let chunks = bytes.chunks_exact(48);
+            let remainder = if !chunks.remainder().is_empty() {
+                Some(scalar_from_le_bytes_mod_order_reducing_48::<S>(
+                    chunks.remainder(),
+                    one,
+                ))
+            } else {
+                None
+            };
+
+            let chunks = chunks.rev().map(|chunk| {
+                #[allow(clippy::expect_used)]
+                let chunk: &[u8; 48] = chunk.try_into().expect("wrong chunk size");
+                S::from_le_array_mod_order(chunk)
+            });
+
+            remainder
+                .into_iter()
+                .chain(chunks)
+                .reduce(|acc, int| S::add(&S::mul(&acc, &two_to_384), &int))
+                .unwrap_or_default()
+        }
+    }
+}
+
+/// Interprets `bytes` as big-endian encoding of an integer, takes it modulo curve (prime)
+/// order and returns scalar `S`
+///
+/// Works with scalars for which [`Reduce<48>`][Reduce] is defined.
+///
+/// Takes:
+/// * Big-endian `bytes` representation of the integer
+/// * Scalar `one = 1`
+pub fn scalar_from_be_bytes_mod_order_reducing_48<S>(bytes: &[u8], one: &S) -> S
+where
+    S: Default + Copy,
+    S: Reduce<48>,
+    S: generic_ec_core::Additive + generic_ec_core::Multiplicative<S, Output = S>,
+{
+    let len = bytes.len();
+    match len {
+        ..=47 => {
+            let mut padded = [0u8; 48];
+            padded[48 - len..].copy_from_slice(bytes);
+            S::from_be_array_mod_order(&padded)
+        }
+        48 => {
+            #[allow(clippy::expect_used)]
+            let bytes: &[u8; 48] = bytes.try_into().expect("we checked that bytes len == 48");
+            S::from_be_array_mod_order(bytes)
+        }
+        49.. => {
+            let two_to_384 = S::add(&S::from_be_array_mod_order(&[0xff; 48]), one);
+
+            let chunks = bytes.rchunks_exact(48);
+            let remainder = if !chunks.remainder().is_empty() {
+                Some(scalar_from_be_bytes_mod_order_reducing_48::<S>(
+                    chunks.remainder(),
+                    one,
+                ))
+            } else {
+                None
+            };
+
+            let chunks = chunks.rev().map(|chunk| {
+                #[allow(clippy::expect_used)]
+                let chunk: &[u8; 48] = chunk.try_into().expect("wrong chunk size");
+                S::from_be_array_mod_order(chunk)
+            });
+
+            remainder
+                .into_iter()
+                .chain(chunks)
+                .reduce(|acc, int| S::add(&S::mul(&acc, &two_to_384), &int))
+                .unwrap_or_default()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // Tests that the algorithms that take `bytes` mod curve order work on ed25519.
     // Note, that `generic-ec-tests` has more extensive tests. A smaller test here
     // is supposed to detect an issue earlier and more precisely if it ever arises.
     #[test]
+    #[cfg(feature = "ed25519")]
     fn works_on_ed25519() {
         let x = 0x11223344_u32;
         let expected = curve25519::Scalar::from(x);
@@ -265,6 +374,32 @@ mod tests {
         assert_eq!(
             expected,
             super::scalar_from_le_bytes_mod_order_reducing_32(&x.to_le_bytes(), one).0
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "secp384r1")]
+    fn works_on_p384() {
+        let x = 0x1122334455667788_u64;
+        let expected = p384::Scalar::from(x);
+
+        let mut bytes_48 = [0u8; 48];
+
+        let one = &crate::rust_crypto::RustCryptoScalar::<p384::NistP384>(p384::Scalar::ONE);
+
+        // BE
+        bytes_48[48 - 8..].copy_from_slice(&x.to_be_bytes());
+        assert_eq!(
+            expected,
+            super::scalar_from_be_bytes_mod_order_reducing_48(&bytes_48, one).0
+        );
+
+        // LE
+        bytes_48.fill(0);
+        bytes_48[..8].copy_from_slice(&x.to_le_bytes());
+        assert_eq!(
+            expected,
+            super::scalar_from_le_bytes_mod_order_reducing_48(&bytes_48, one).0
         );
     }
 }
